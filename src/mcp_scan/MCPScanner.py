@@ -5,6 +5,7 @@ import traceback
 from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
+from mcp.types import Implementation as MCPClientImplementation
 import json
 import os
 import textwrap
@@ -146,7 +147,7 @@ def upload_whitelist_entry(entry, base_url):
         "server": entry.server,
         "tool": entry.tool,
     }
-    response = requests.post(url, headers=headers, data=json.dumps(data))
+    requests.post(url, headers=headers, data=json.dumps(data))
 
 def verify_server(tools, prompts, resources, base_url):
     if len(tools) == 0:
@@ -187,7 +188,7 @@ def verify_server(tools, prompts, resources, base_url):
 
 
 async def check_server(
-    server_config: SSEServer | StdioServer, timeout, suppress_mcpserver_io
+    server_config: SSEServer | StdioServer, timeout, suppress_mcpserver_io, identity=None
 ):
     is_sse = isinstance(server_config, SSEServer)
 
@@ -209,7 +210,7 @@ async def check_server(
 
     async def _check_server():
         async with get_client(server_config) as (read, write):
-            async with ClientSession(read, write) as session:
+            async with ClientSession(read, write, client_info=identity) as session:
                 meta = await session.initialize()
                 # for see servers we need to check the announced capabilities
                 if not is_sse or meta.capabilities.prompts.supported:
@@ -245,9 +246,9 @@ async def check_server(
         return await _check_server()
 
 
-async def check_server_with_timeout(server_config, timeout, suppress_mcpserver_io):
+async def check_server_with_timeout(server_config, timeout, suppress_mcpserver_io, identity=None):
     return await asyncio.wait_for(
-        check_server(server_config, timeout, suppress_mcpserver_io), timeout
+        check_server(server_config, timeout, suppress_mcpserver_io, identity), timeout
     )
 
 
@@ -376,6 +377,8 @@ class MCPScanner:
         storage_file="~/.mcp-scan",
         server_timeout=10,
         suppress_mcpserver_io=True,
+        identify_as=None,
+        identify_as_version=None,
         **kwargs,
     ):
         self.paths = files
@@ -385,6 +388,8 @@ class MCPScanner:
         self.storage_file = StorageFile(self.storage_file_path)
         self.server_timeout = server_timeout
         self.suppress_mcpserver_io = suppress_mcpserver_io
+        self.identify_as = identify_as
+        self.identify_as_version = identify_as_version
 
     def inspect_path(self, path, verbose=True):
         """
@@ -457,9 +462,12 @@ class MCPScanner:
         servers_with_tools = {}
         for server_name, server_config in servers.items():
             try:
+                identity = None
+                if self.identify_as is not None:
+                    identity = MCPClientImplementation(name=self.identify_as, version=self.identify_as_version)
                 prompts, resources, tools = asyncio.run(
                     check_server_with_timeout(
-                        server_config, self.server_timeout, self.suppress_mcpserver_io
+                        server_config, self.server_timeout, self.suppress_mcpserver_io, identity
                     )
                 )
                 status = None

@@ -1,3 +1,4 @@
+import inspect
 import sys
 import argparse
 from .MCPScanner import MCPScanner
@@ -74,6 +75,18 @@ def main():
         help="Suppress the output of the mcp server",
     )
     scan_parser.add_argument(
+        "--identify-as",
+        type=str,
+        default=None,
+        help="Identify as this name when connecting to the mcp server; defaults to the mcp client sdk default",
+    )
+    scan_parser.add_argument(
+        '--identify-as-version',
+        type=str,
+        default=None,
+        help="Identify as this version when connecting to the mcp server; defaults to the mcp client sdk default",
+    )
+    scan_parser.add_argument(
         "files",
         type=str,
         nargs="*",
@@ -95,6 +108,19 @@ def main():
         type=str2bool,
         help="Suppress the output of the mcp server",
     )
+    inspect_parser.add_argument(
+        "--identify-as",
+        type=str,
+        default=None,
+        help="Identify as this name when connecting to the mcp server; defaults to the mcp client sdk default",
+    )
+    inspect_parser.add_argument(
+        '--identify-as-version',
+        type=str,
+        default=None,
+        help="Identify as this version when connecting to the mcp server; defaults to the mcp client sdk default",
+    )
+
     inspect_parser.add_argument(
         "files",
         type=str,
