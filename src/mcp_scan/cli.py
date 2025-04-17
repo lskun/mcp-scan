@@ -174,11 +174,11 @@ def main():
         if args.reset:
             MCPScanner(**vars(args)).reset_whitelist()
             sys.exit(0)
-        elif all(map(lambda x: x is not None, [args.name, args.hash])): # no args
-            MCPScanner(**vars(args)).print_whitelist()
-            sys.exit(0)
         elif all(map(lambda x: x is not None, [args.name, args.hash])):
             MCPScanner(**vars(args)).whitelist(args.name, args.hash, args.local_only)
+            MCPScanner(**vars(args)).print_whitelist()
+            sys.exit(0)
+        elif args.name is None and args.hash is None: # 没有参数时打印白名单
             MCPScanner(**vars(args)).print_whitelist()
             sys.exit(0)
         else:

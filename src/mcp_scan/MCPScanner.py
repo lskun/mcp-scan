@@ -114,7 +114,7 @@ def format_inspect_tool_line(
         name = name[:22] + "..."
     name = name + " " * (25 - len(name))
 
-    if hasattr(tool, "description"):
+    if hasattr(tool, "description") and tool.description is not None:
         # dedent the description
         description = tool.description
         # wrap the description to 80 characters
@@ -147,7 +147,7 @@ def verify_server(tools, prompts, resources, base_url):
     messages = [
         {
             "role": "system",
-            "content": f"Tool Name:{tool.name}\nTool Description:{tool.description}",
+            "content": f"Tool Name:{tool.name}\nTool Description:{getattr(tool, 'description', '') or ''}",
         }
         for tool in tools
     ]
@@ -300,7 +300,8 @@ class StorageFile:
         self.data["__whitelist"] = {}
         
     def compute_hash(self, tool):
-        return md5(tool.description.encode()).hexdigest()
+        description = getattr(tool, "description", None) or "<no description available>"
+        return md5(description.encode()).hexdigest()
 
     def check_and_update(self, server_name, tool, verified):
         key = f"{server_name}.{tool.name}"
@@ -331,6 +332,8 @@ class StorageFile:
         rich.print(f"[bold]{len(whitelist_keys)} entries in whitelist[/bold]")
 
     def add_to_whitelist(self, name, hash):
+        if "__whitelist" not in self.data:
+            self.data["__whitelist"] = {}
         self.data["__whitelist"][name] = hash
         self.save()
 
@@ -510,11 +513,12 @@ class MCPScanner:
             flagged_names = list(other_server_names) + other_tool_names
             flagged_names = set(map(str.lower, flagged_names))
             for tool in tools:
-                tokens = tool.description.lower().split()
-                for token in tokens:
-                    if token in flagged_names:
-                        cross_ref_found = True
-                        cross_reference_sources.add(token)
+                if hasattr(tool, "description") and tool.description is not None:
+                    tokens = tool.description.lower().split()
+                    for token in tokens:
+                        if token in flagged_names:
+                            cross_ref_found = True
+                            cross_reference_sources.add(token)
         if verbose:
             if cross_ref_found:
                 rich.print(
